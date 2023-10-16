@@ -1,44 +1,38 @@
-import pandas as pd
 from datetime import datetime
 import glob
 import os
+import pandas as pd
+import warnings
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 class FileReadWrite:
     @staticmethod
     def get_df_from_goes_file(filepath):
+        # TODO: let's doublecheck that we're not throwing out any rows when we're
+        #   reading the files since the initial discard rowcount is hardcoded to 13
+
         separator = ","
         tmp = []
         with open(filepath, "r") as infile:
             data = infile.readlines()
             for i in range(len(data)):
                 if i >= 13:
-                    #             print(i)
                     i_d = data[i]
-                    #             print(i_d)
                     list_row = i_d.split()
-                    #             print(list_row)
                     if list_row == []:
-                        #                 print('it is an empty_list')
                         continue
-                    #             print(i)
-                    #             print(list_row)
                     if "+" in list_row:
-                        #                 print('yes there is a +')
                         list_row = [i for i in list_row if i != "+"]
-                    #                 print(list_row)
                     if len(list_row) == 9:
                         mylist = list_row
                     elif len(list_row) == 10:
                         mylist = list_row[:-1]
-                    #                 print(mylist)
                     elif len(list_row) == 11:
                         mylist = list_row[:-2]
                     else:
                         continue
-                    #             print(mylist)
-                    #             i_d = separator.join(list_row)
-                    #             print(i_d)
                     tmp.append(mylist)
 
         df = pd.DataFrame(
@@ -109,8 +103,35 @@ class FileReadWrite:
         # Concatenate the list of DataFrames into a single DataFrame
         result_df = pd.concat(dfs, ignore_index=True)
 
+        # Add columns for start_time, end_time, max_time and drop (Date, Begin, End, Max)
+        result_df["Begin"] = result_df["Begin"].str.replace("[a-zA-Z]", "")
+        result_df["Max"] = result_df["Max"].str.replace("[a-zA-Z]", "")
+        result_df["End"] = result_df["End"].str.replace("[a-zA-Z]", "")
+        result_df["begin_datetime"] = pd.to_datetime(
+            result_df["Date"] + " " + result_df["Begin"],
+            format="%Y%m%d %H%M",
+            errors="coerce",
+        )
+        result_df["max_datetime"] = pd.to_datetime(
+            result_df["Date"] + " " + result_df["Max"],
+            format="%Y%m%d %H%M",
+            errors="coerce",
+        )
+        result_df["end_datetime"] = pd.to_datetime(
+            result_df["Date"] + " " + result_df["End"],
+            format="%Y%m%d %H%M",
+            errors="coerce",
+        )
+        result_df = result_df.drop(columns=["Begin", "Max", "End", "Date"])
+        result_df.loc[
+            result_df["max_datetime"] < result_df["begin_datetime"], "max_datetime"
+        ] = result_df["max_datetime"] + pd.DateOffset(days=1)
+        result_df.loc[
+            result_df["end_datetime"] < result_df["begin_datetime"], "end_datetime"
+        ] = result_df["end_datetime"] + pd.DateOffset(days=1)
+
         # Sort the DataFrame by the "Date" column in ascending order
-        result_df = result_df.sort_values(by=["Date", "Event"])
+        result_df = result_df.sort_values(by=["begin_datetime", "Event"])
 
         # Reset the index of the sorted DataFrame
         result_df = result_df.reset_index(drop=True)
