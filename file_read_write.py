@@ -52,7 +52,7 @@ class FileReadWrite:
         return df
 
     @staticmethod
-    def get_df_from_from_date_range(path, start_date, end_date):
+    def get_goes_events_df_for_interval(path, start_date, end_date):
         # Initializing an empty array to store the Dataframes
         dfs = []
 
