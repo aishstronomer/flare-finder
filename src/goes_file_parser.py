@@ -7,7 +7,7 @@ import warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
-class FileReadWrite:
+class GOESFileParser:
     @staticmethod
     def get_df_from_goes_file(filepath):
         # TODO: let's doublecheck that we're not throwing out any rows when we're
@@ -90,7 +90,7 @@ class FileReadWrite:
             file_date = os.path.basename(file_path)[:8]
 
             # Read the file into a DataFrame
-            df = FileReadWrite.get_df_from_goes_file(
+            df = GOESFileParser.get_df_from_goes_file(
                 file_path
             )  # Adjust file reading as needed
 
