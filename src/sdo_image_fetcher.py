@@ -13,7 +13,7 @@ import re
 import sunpy.visualization.colormaps
 
 # setting configs
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 
 
 class SDOImageFetcher:
@@ -115,17 +115,19 @@ class SDOImageFetcher:
             image_arr = image_arr[downsampled_pxl_posns, :][:, downsampled_pxl_posns]
 
             # Save the image
-            fig = plt.figure(figsize=(5, 5))
-            plt.imshow(
-                image_arr,
-                origin="lower",
-                vmin=10,
-                vmax=1000,
-                cmap=plt.get_cmap("sdoaia171"),
-            )
             image_path = f"{images_png_folder}/{current_img_time}.png"
-            plt.savefig(image_path)
-            plt.close("all")  # Close the figure manually to release resources
+            with plt.rc_context({'backend': 'Agg'}):
+                plt.figure(figsize=(5, 5))
+                plt.imshow(
+                    image_arr,
+                    origin="lower",
+                    vmin=10,
+                    vmax=1000,
+                    cmap=plt.get_cmap("sdoaia171"),
+                )
+                plt.savefig(image_path)
+                plt.close("all")
+            
             if is_verbose:
                 print(
                     f"fetched image_time_num: {image_time_idx + 1} of {len(images_closest_times)}"
