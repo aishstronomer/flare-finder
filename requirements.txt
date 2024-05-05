@@ -1,0 +1,6 @@
+# use python3.10 as this works with colab
+dask
+matplotlib
+s3fs
+sunpy
+zarr
