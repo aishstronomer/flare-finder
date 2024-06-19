@@ -46,9 +46,9 @@ class SDOImageFetcher:
         )
 
     @staticmethod
-    def get_single_solar_image(image_idx, path_to_zarr):
+    def get_single_solar_image(image_idx, path_to_zarr, wavelength):
         images_drry = da.from_array(
-            SDOImageFetcher.load_single_aws_zarr(path_to_zarr)["131A"]
+            SDOImageFetcher.load_single_aws_zarr(path_to_zarr)[wavelength]
         )
         image = np.array(images_drry[image_idx, :, :])
         return image
@@ -59,20 +59,17 @@ class SDOImageFetcher:
         desired_times,
         sav_folder_path,
         tolerance,
+        wavelength,
         is_verbose=False,
     ):
 
         # for desired_times, get closest times in the zarr file and corresponding indices:
         #   images_zry_closest_idxs, images_closest_times
         images_zry_closest_idxs = []
-        images_131a_zarray = SDOImageFetcher.load_single_aws_zarr(
+        images_zarray = SDOImageFetcher.load_single_aws_zarr(
             path_to_zarr=s3_root_for_sdoml_year_zarr,
-        )["131A"]
-        images_zry_times = pd.to_datetime(np.array(images_131a_zarray.attrs["T_OBS"]))
-
-        # TEMP: pick up images_zry_times from local
-        # pickle.dump(images_zry_times, open('temp_images_zry_times.pkl', 'wb'))
-        # images_zry_times = pickle.load(open("temp_images_zry_times.pkl", "rb"))
+        )[wavelength]
+        images_zry_times = pd.to_datetime(np.array(images_zarray.attrs["T_OBS"]))
 
         for desired_time in desired_times[None:None]:
             images_zry_closest_idx = np.argmin(abs(images_zry_times - desired_time))
@@ -109,26 +106,28 @@ class SDOImageFetcher:
 
             # get current image
             image_arr = SDOImageFetcher.get_single_solar_image(
-                images_zry_closest_idxs[image_time_idx], s3_root_for_sdoml_year_zarr
+                image_idx=images_zry_closest_idxs[image_time_idx],
+                path_to_zarr=s3_root_for_sdoml_year_zarr,
+                wavelength=wavelength,
             )
             downsampled_pxl_posns = np.arange(0, image_arr.shape[0], 2)
             image_arr = image_arr[downsampled_pxl_posns, :][:, downsampled_pxl_posns]
 
             # Save the image
-            sdoaia131 = matplotlib.colormaps['sdoaia131']
+            sdo_cmap = matplotlib.colormaps[f"sdoaia{wavelength[0:-1]}"]
             image_path = f"{images_png_folder}/{current_img_time}.png"
-            with plt.rc_context({'backend': 'Agg'}):
+            with plt.rc_context({"backend": "Agg"}):
                 plt.figure(figsize=(5, 5))
                 plt.imshow(
                     image_arr,
                     origin="lower",
                     vmin=np.percentile(image_arr, 1),
                     vmax=np.percentile(image_arr, 99.5),
-                    cmap=sdoaia131,
+                    cmap=sdo_cmap,
                 )
                 plt.savefig(image_path)
                 plt.close("all")
-            
+
             if is_verbose:
                 print(
                     f"fetched image_time_num: {image_time_idx + 1} of {len(images_closest_times)}"
