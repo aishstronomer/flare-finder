@@ -10,7 +10,7 @@ import pandas as pd
 import pickle
 import glob
 import re
-import sunpy.visualization.colormaps
+import sunpy.visualization.colormaps as cm
 
 # setting configs
 # matplotlib.use("Agg")
@@ -48,7 +48,7 @@ class SDOImageFetcher:
     @staticmethod
     def get_single_solar_image(image_idx, path_to_zarr):
         images_drry = da.from_array(
-            SDOImageFetcher.load_single_aws_zarr(path_to_zarr)["171A"]
+            SDOImageFetcher.load_single_aws_zarr(path_to_zarr)["131A"]
         )
         image = np.array(images_drry[image_idx, :, :])
         return image
@@ -65,10 +65,10 @@ class SDOImageFetcher:
         # for desired_times, get closest times in the zarr file and corresponding indices:
         #   images_zry_closest_idxs, images_closest_times
         images_zry_closest_idxs = []
-        images_171a_zarray = SDOImageFetcher.load_single_aws_zarr(
+        images_131a_zarray = SDOImageFetcher.load_single_aws_zarr(
             path_to_zarr=s3_root_for_sdoml_year_zarr,
-        )["171A"]
-        images_zry_times = pd.to_datetime(np.array(images_171a_zarray.attrs["T_OBS"]))
+        )["131A"]
+        images_zry_times = pd.to_datetime(np.array(images_131a_zarray.attrs["T_OBS"]))
 
         # TEMP: pick up images_zry_times from local
         # pickle.dump(images_zry_times, open('temp_images_zry_times.pkl', 'wb'))
@@ -115,15 +115,16 @@ class SDOImageFetcher:
             image_arr = image_arr[downsampled_pxl_posns, :][:, downsampled_pxl_posns]
 
             # Save the image
+            sdoaia131 = matplotlib.colormaps['sdoaia131']
             image_path = f"{images_png_folder}/{current_img_time}.png"
             with plt.rc_context({'backend': 'Agg'}):
                 plt.figure(figsize=(5, 5))
                 plt.imshow(
                     image_arr,
                     origin="lower",
-                    vmin=10,
-                    vmax=1000,
-                    cmap=plt.get_cmap("sdoaia171"),
+                    vmin=np.percentile(image_arr, 1),
+                    vmax=np.percentile(image_arr, 99.5),
+                    cmap=sdoaia131,
                 )
                 plt.savefig(image_path)
                 plt.close("all")
