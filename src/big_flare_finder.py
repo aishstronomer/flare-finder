@@ -282,7 +282,8 @@ class BigFlareFinder:
 
         # add a datetime column
         images_df["datetime"] = pd.to_datetime(
-            images_df["image_path"].str.split("/").str[-1].str[None:-4]
+            images_df["image_path"].str.split("/").str[-1].str[None:-4],
+            format = "mixed"
         )
 
         # sort images_df by datetime
